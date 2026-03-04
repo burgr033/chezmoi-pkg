@@ -13,14 +13,24 @@ chezmoi pkg add thefuck
 chezmoi pkg remove thefuck
 chezmoi pkg list
 ```
-
-
 ## Config
 
 This tool just has a config file under ~/.config/chezmoi-pkg/pkg.yaml
 
 ```yaml
 file: $HOME/.local/chezmoi/.chezmoidata/machine.toml
+```
+
+## generated file
+
+will look something like this:
+
+```toml
+[packages]
+[packages.linux]
+[packages.linux.arch]
+[packages.linux.arch.HOSTNAME]
+packages = ['amd-ucode', 'base', 'btrfs-assistant', 'btrfs-progs', 'cups', 'dosfstools', 'efibootmgr', 'inotify-tools', 'linux', 'linux-firmware', 'linux-headers', 'linux-lts', 'linux-lts-headers', 'linux-zen', 'linux-zen-headers', 'networkmanager', 'ntfs-3g', 'snapper', 'sudo', 'syslinux', 'vulkan-radeon', 'xf86-video-amdgpu', 'xf86-video-ati', 'xorg-server', 'xorg-xhost', 'xorg-xinit', 'xorg-xrandr', 'yay-bin', 'zram-generator']
 ```
 
 ## usage
