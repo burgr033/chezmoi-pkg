@@ -1,6 +1,6 @@
 # chezmoi-pkg
 
-i have a really quirky setup where i use a .chezmoidata/machine.toml file to manage machine specific package installation (and tracking) on my machines.
+i have a really quirky setup where i use a .chezmoidata/machine.toml file to manage machine specific package installation (and tracking) on my machines which then gets installed during `chezmoi apply` with the help of a script (see below)
 
 This kinda achieves "declarative" package management on arch with the help of chezmoi
 
