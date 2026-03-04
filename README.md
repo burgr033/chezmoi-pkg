@@ -7,6 +7,8 @@ This kinda achieves "declarative" package management on arch with the help of ch
 ## usage
 
 ```bash
+go install github.com/burgr033/chezmoi-pkg
+#---
 chezmoi pkg add thefuck
 chezmoi pkg remove thefuck
 chezmoi pkg list
