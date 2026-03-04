@@ -33,7 +33,7 @@ will look something like this:
 packages = ['amd-ucode', 'base', 'btrfs-assistant', 'btrfs-progs', 'cups', 'dosfstools', 'efibootmgr', 'inotify-tools', 'linux', 'linux-firmware', 'linux-headers', 'linux-lts', 'linux-lts-headers', 'linux-zen', 'linux-zen-headers', 'networkmanager', 'ntfs-3g', 'snapper', 'sudo', 'syslinux', 'vulkan-radeon', 'xf86-video-amdgpu', 'xf86-video-ati', 'xorg-server', 'xorg-xhost', 'xorg-xinit', 'xorg-xrandr', 'yay-bin', 'zram-generator']
 ```
 
-## usage
+## purpose
 
 Basically you need a template in chezmoi which installs your packages on apply.
 
