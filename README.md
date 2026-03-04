@@ -2,7 +2,7 @@
 
 i have a really quirky setup where i use a .chezmoidata/machine.toml file to manage machine specific package installation (and tracking) on my machines which then gets installed during `chezmoi apply` with the help of a script (see below)
 
-This kinda achieves "declarative" package management on arch with the help of chezmoi
+This kinda achieves "declarative" package management on arch with the help of chezmoi. See my dotfiles for reference: https://github.com/burgr033/dotfiles
 
 ## usage
 
@@ -35,7 +35,7 @@ packages = ['amd-ucode', 'base', 'btrfs-assistant', 'btrfs-progs', 'cups', 'dosf
 
 ## purpose
 
-Basically you need a template in chezmoi which installs your packages on apply.
+Basically you need a .chezmoitemplate script in chezmoi which installs your packages on apply. So everytime i add or remove a package it runs chezmoi sync and checks the diff. installs and uninstalls accordingly
 
 Example: (this example also incorporates my profiles (office, common, desktop, etc.) from packages.toml in my chezmoi source path.
 
@@ -111,5 +111,3 @@ if [[ "$confirm_in" =~ ^[Yy]$ ]]; then
     echo "$MISSING" | xargs -r yay -S --needed --noconfirm
 fi
 ```
-
-So everytime i add or remove a package it runs chezmoi sync and checks the diff. installs and uninstalls accordingly
