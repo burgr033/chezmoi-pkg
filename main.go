@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 
@@ -25,11 +26,10 @@ func main() {
 
 	configDir, err := os.UserConfigDir()
 	if err != nil {
-		log.Fatalf("missing config directory:%v\n", err)
+		log.Fatalf("missing config directory: %v\n", err)
 	}
 
 	viper.AddConfigPath(filepath.Join(configDir, "chezmoi-pkg"))
-
 	viper.SetConfigName("pkg")
 	viper.SetConfigType("yaml")
 
@@ -38,11 +38,9 @@ func main() {
 	}
 
 	filename := viper.GetString("file")
-
 	packageFile := loadMachinePackages(filename)
 
 	packages := ensurePath(packageFile, "packages", "linux", "arch", hostname)
-
 	list := getPackageList(packages)
 
 	switch action {
@@ -88,10 +86,19 @@ func main() {
 	// Clean + sort before saving
 	slices.Sort(list)
 	list = slices.Compact(list)
-
 	packages["packages"] = list
 
 	saveConfig(packageFile, filename)
+
+	// Run chezmoi apply ONLY after add/remove
+	cmd := exec.Command("chezmoi", "apply")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	if err := cmd.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func usage() {
