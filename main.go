@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -8,22 +9,144 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/charmbracelet/fang"
 	"github.com/pelletier/go-toml/v2"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
+type App struct {
+	Hostname string
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		usage()
-	}
-
-	action := os.Args[1]
-
 	hostname, err := os.Hostname()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
+	app := &App{
+		Hostname: hostname,
+	}
+
+	root := NewRootCmd(app)
+
+	if err := fang.Execute(context.Background(), root); err != nil {
+		os.Exit(1)
+	}
+}
+
+func NewRootCmd(app *App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "chezmoi-pkg",
+		Short: "Manage packages declaratively with chezmoi",
+	}
+
+	cmd.AddCommand(NewAddCmd(app))
+	cmd.AddCommand(NewRemoveCmd(app))
+	cmd.AddCommand(NewListCmd(app))
+
+	return cmd
+}
+
+func NewAddCmd(app *App) *cobra.Command {
+	var apply bool
+
+	cmd := &cobra.Command{
+		Use:   "add [packages...]",
+		Short: "Add packages",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			list, config, filename := getList(app)
+
+			for _, p := range args {
+				if !slices.Contains(list, p) {
+					list = append(list, p)
+					fmt.Println("Added:", p)
+				} else {
+					fmt.Println("Already exists:", p)
+				}
+			}
+
+			updatePackages(config, list, app.Hostname)
+			saveConfig(config, filename)
+
+			if apply {
+				return applyChezmoi()
+			}
+
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&apply, "apply", false, "run chezmoi apply after modification")
+	return cmd
+}
+
+func NewRemoveCmd(app *App) *cobra.Command {
+	var apply bool
+
+	cmd := &cobra.Command{
+		Use:   "remove [package]",
+		Short: "Remove a package",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pkg := args[0]
+
+			list, config, filename := getList(app)
+
+			list = remove(list, pkg)
+
+			fmt.Println("Removed:", pkg)
+
+			updatePackages(config, list, app.Hostname)
+			saveConfig(config, filename)
+
+			if apply {
+				return applyChezmoi()
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&apply, "apply", false, "run chezmoi apply after modification")
+
+	return cmd
+}
+
+func NewListCmd(app *App) *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List packages",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			list, _, _ := getList(app)
+
+			if len(list) == 0 {
+				fmt.Println("No packages found for host:", app.Hostname)
+				return nil
+			}
+
+			slices.Sort(list)
+
+			for _, p := range list {
+				fmt.Println(p)
+			}
+
+			return nil
+		},
+	}
+}
+
+func applyChezmoi() error {
+	cmd := exec.Command("chezmoi", "apply")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	return cmd.Run()
+}
+
+func getList(app *App) ([]string, map[string]any, string) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		log.Fatalf("missing config directory: %v\n", err)
@@ -38,75 +161,25 @@ func main() {
 	}
 
 	filename := viper.GetString("file")
-	packageFile := loadMachinePackages(filename)
 
-	packages := ensurePath(packageFile, "packages", "linux", "arch", hostname)
+	config := loadMachinePackages(filename)
+
+	packages := ensurePath(config, "packages", "linux", "arch", app.Hostname)
+
 	list := getPackageList(packages)
 
-	switch action {
-
-	case "add":
-		if len(os.Args) != 3 {
-			usage()
-		}
-		pkg := os.Args[2]
-
-		if !slices.Contains(list, pkg) {
-			list = append(list, pkg)
-			fmt.Println("Added:", pkg)
-		} else {
-			fmt.Println("Already exists:", pkg)
-		}
-
-	case "remove":
-		if len(os.Args) != 3 {
-			usage()
-		}
-		pkg := os.Args[2]
-
-		list = remove(list, pkg)
-		fmt.Println("Removed:", pkg)
-
-	case "list":
-		if len(list) == 0 {
-			fmt.Println("No packages found for host:", hostname)
-			return
-		}
-
-		slices.Sort(list)
-		for _, p := range list {
-			fmt.Println(p)
-		}
-		return
-
-	default:
-		usage()
-	}
-
-	// Clean + sort before saving
-	slices.Sort(list)
-	list = slices.Compact(list)
-	packages["packages"] = list
-
-	saveConfig(packageFile, filename)
-
-	// Run chezmoi apply ONLY after add/remove
-	cmd := exec.Command("chezmoi", "apply")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
+	return list, config, filename
 }
 
-func usage() {
-	fmt.Println("Usage:")
-	fmt.Println("  add <package>")
-	fmt.Println("  remove <package>")
-	fmt.Println("  list")
-	os.Exit(1)
+func updatePackages(config map[string]any, list []string, hostname string) {
+	packages := ensurePath(config, "packages", "linux", "arch", hostname)
+
+	var arr []any
+	for _, p := range list {
+		arr = append(arr, p)
+	}
+
+	packages["packages"] = arr
 }
 
 func loadMachinePackages(filename string) map[string]any {
