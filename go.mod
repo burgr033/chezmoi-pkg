@@ -1,3 +1,4 @@
+// Deprecated: use codeberg.org/burgr/chezmoi-pkg instead.
 module github.com/burgr033/chezmoi-pkg
 
 go 1.25.0
